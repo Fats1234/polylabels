@@ -101,7 +101,8 @@
             fwrite($fh,$rowString."\n");
          }
       }
-
+      
+      //close database connection
       fclose($fh);
       $labelsdb->close();
 
