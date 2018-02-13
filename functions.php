@@ -1,9 +1,9 @@
 <?php
-   function startForm($action,$method,$upload=FALSE){
+   function startForm($action,$method,$upload=FALSE,$name="form"){
       if($upload){
-         return "<form action=\"$action\" method=\"$method\" enctype=\"multipart/form-data\">\n";
+         return "<form action=\"$action\" method=\"$method\" name=\"$name\" id=\"$name\" enctype=\"multipart/form-data\">\n";
       }else{
-         return "<form action=\"$action\" method=\"$method\">\n";
+         return "<form action=\"$action\" method=\"$method\" name=\"$name\" id=\"$name\">\n";
       }
    }
    

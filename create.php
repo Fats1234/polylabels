@@ -23,7 +23,7 @@
   
       //$attrs = array('border' => '1');
 
-      echo startForm("generate.php","POST");
+      echo startForm("generate.php","POST",FALSE,"labelForm");
       echo genHidden("labelID",$labelID);
  
       /*Generate Static Fields Table*/
@@ -154,8 +154,14 @@
       $fieldsTable->setColAttributes(5,$attrs);
 
       echo $fieldsTable->toHTML();
-
       echo endForm();
+      
+      if(isset($_POST['noedit'])){
+         echo "<script type=\"text/javascript\">\n";
+         echo "document.getElementById(\"labelForm\").submit();\n";
+         echo "</script>\n";
+      }
+
    }
    //Display picture of the label description.
 

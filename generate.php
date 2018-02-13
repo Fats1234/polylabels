@@ -15,7 +15,7 @@
       $fieldVals=array();
       foreach($label->staticFields as $staticField){
          $csvHeader.=$staticField->csvname.",";
-         $staticRowStr.=$_POST[$staticField->csvname].",";
+         $staticRowStr.=str_replace(",","\,",$_POST[$staticField->csvname]).",";
          $fieldVals[$staticField->csvname]=$_POST[$staticField->csvname];
       }
      
@@ -60,7 +60,7 @@
             }elseif(isset($_POST['input'])){
                $serialNums=explode("\n",str_replace("\r","",trim($_POST[$serialField->csvname."area"])));
                for($i=0;$i<count($serialNums);$i++){
-                  $fullRowStrs[$i].=$serialNums[$i].",";
+                  $fullRowStrs[$i].=str_replace(",","\,",$serialNums[$i]).",";
                }
             }
             $fieldVals[$serialField->csvname]=$serialNums; //serialNums is an array
@@ -101,8 +101,7 @@
             fwrite($fh,$rowString."\n");
          }
       }
-      
-      //close database connection
+
       fclose($fh);
       $labelsdb->close();
 
@@ -113,7 +112,7 @@
       exec("glabels-3-batch -o output/$label->name/$label->name-$timestamp.pdf -f $startPosition -i archive/label.csv glabels/$label->glabelsFile");
 
       echo "<font size=\"6\">The label file is ready.  Right click the link below and save as or click to open:</font><br />\n";
-      echo "<a href=\"http://production03/labels/output/$label->name/$label->name-$timestamp.pdf\"><font size=\"6\">$label->name-$timestamp.pdf</font></a><br /><br />\n";
+      echo "<a href=\"output/$label->name/$label->name-$timestamp.pdf\"><font size=\"6\">$label->name-$timestamp.pdf</font></a><br /><br />\n";
       echo "<font size=\"6\">Alternatively, the file is available at:</font><br />\n";
       echo "<font size=\"6\">\\\\production03\\share001\\labels_pdf\\$label->name\\$label->name-$timestamp.pdf</font><br />\n";
       echo "<font size=\"6\">R:\\labels_pdf\\$label->name\\$label->name-$timestamp.pdf</font><br />\n";
