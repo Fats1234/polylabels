@@ -25,11 +25,13 @@
       if(isset($_POST['setName'])){$label->updateName($labelsdb,$_POST['labelName']);header("Location: edit.php?label=$label->name");}
       if(isset($_POST['setDesc'])){$label->updateDesc($labelsdb,$_POST['labelDesc']);header("Location: edit.php?label=$label->name");}
       if(isset($_POST['changeState'])){$label->changeActiveState($labelsdb);header("Location: edit.php?label=$labelname");}
+      if(isset($_POST['changeOutline'])){$label->changeOutlineState($labelsdb);header("Location: edit.php?label=$labelname");}
       if(isset($_POST['setNumCopies'])){ $label->updateNumCopies($labelsdb,$_POST['numCopies']); header("Location: edit.php?label=$labelname");}
       if(isset($_POST['addField'])){
          $label->addField($labelsdb,$_POST['newFieldName'],$_POST['newCSVName'],$_POST['newFieldType']);
          header("Location: edit.php?label=$labelname");
       }
+      if(isset($_POST['changeHide'])){$field->changeHideState($labelsdb); header("Location: edit.php?label=$labelname");}
       if(isset($_POST['delField'])){$label->delField($labelsdb,$field); header("Location: edit.php?label=$labelname");}
       if(isset($_POST['addVal'])){$field->addFieldValue($labelsdb,$_POST['newValue']); header("Location: edit.php?label=$labelname");}
       if(isset($_POST['delVal'])){
@@ -66,6 +68,8 @@
             echo "Error uploading sample descriptive picture!";
          }
       }
+      if(isset($_POST['setLabelType'])){$label->updateLabelTypeID($labelsdb,$_POST['labelTypeID']); header("Location: edit.php?label=$labelname");}
+      if(isset($_POST['setStamp'])){$label->updateStampID($labelsdb,$_POST['stampID']); header("Location: edit.php?label=$labelname");}
       
       /********************Fields Settings Table************************/
       echo "<font size=\"6\">Label Settings</font>";
@@ -83,8 +87,13 @@
       $settingsTable->setCellContents($row,0,"Active/Inactive");
       $settingsTable->setCellContents($row,1,$label->active);
       $activeArray=array("activate","deactivate");
-      //$settingsTable->setCellContents($row,2,startForm("edit.php?label=$labelname","POST").genDropBox("active",$activeArray));
       $settingsTable->setCellContents($row,3,startForm("edit.php?label=$labelname","POST").genButton("Change State","changeState").endForm());
+      $row++;
+      
+      $settingsTable->setCellContents($row,0,"Print Outline");
+      $settingsTable->setCellContents($row,1,$label->outline);
+      $activeArray=array("activate","deactivate");
+      $settingsTable->setCellContents($row,3,startForm("edit.php?label=$labelname","POST").genButton("Change Outline Printing","changeOutline").endForm());
       $row++;
       
       $settingsTable->setCellContents($row,0,"Label Name");
@@ -123,6 +132,25 @@
       $settingsTable->setCellContents($row,3,genButton("Set Sample Descriptive Picture","setSampleDescPic").endForm());
       $row++;
       
+      $settingsTable->setCellContents($row,0,"Label Type");
+      $settingsTable->setCellContents($row,1,$label->labelType->name);
+      $allLabelTypesArray=$label->labelType->getAllLabelTypes($labelsdb);
+      $settingsTable->setCellContents($row,2,startForm("edit.php?label=$labelname","POST",TRUE).
+                                                genDropBox("labelTypeID",$allLabelTypesArray,$label->labelType->id,TRUE));
+      $settingsTable->setCellContents($row,3,genButton("Set Label Type","setLabelType").endForm());
+      $row++;
+      
+      $settingsTable->setCellContents($row,0,"Stamp this label with Another Label");
+      $stampLabelName="No Stamp Set";
+      if($label->stampID)
+         $stampLabelName = $label->getStampLabelName($labelsdb);
+      $settingsTable->setCellContents($row,1,$stampLabelName);
+      $allLabelsArray=$label->labelType->getAllStampNames($labelsdb);
+      $settingsTable->setCellContents($row,2,startForm("edit.php?label=$labelname","POST",TRUE).
+                                                genDropBox("stampID",$allLabelsArray,$label->stampID,TRUE));
+      $settingsTable->setCellContents($row,3,genButton("Set Stamp Label","setStamp").endForm());
+      $row++;
+      
       echo $settingsTable->toHTML();
       echo "\n<br><br><br>";
 
@@ -147,7 +175,13 @@
       foreach($fieldsArray as $field){
          $fieldsTable->setCellContents($row,0,$field->name);
          $fieldsTable->setCellContents($row,1,$field->csvname);
-         $fieldsTable->setCellContents($row,2,$field->type);
+         $hideState="";
+         if($field->hidden)
+            $hideState="(hidden)";
+         $fieldsTable->setCellContents($row,2,startForm("edit.php?label=$labelname","POST")."\t\t\t".$field->type.$hideState.
+                                                         genHidden("fieldID",$field->id)."\t\t\t".
+                                                         genButton("Hide/Unhide","changeHide")."\t\t\t".
+                                                         endForm());
          $fieldsTable->setCellContents($row,3,startForm("edit.php?label=$labelname","POST")."\t\t\t".
                                                          genHidden("fieldID",$field->id)."\t\t\t".
                                                          genButton("Delete Field","delField")."\t\t\t".

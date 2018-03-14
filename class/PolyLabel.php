@@ -1,12 +1,14 @@
 <?php
    require_once("PolyLabelField.php");
    require_once("PolyLabelBarcode.php");
+   require_once("PolyLabelType.php");
    
    class PolyLabel{
       private $id;
       private $name;
       private $description;
       private $active;
+      private $outline; //print outline for label.  This is mainly used for forms such as Sales Order forms.
       private $samplePic;
       private $sampleDescPic;
       private $glabelsFile;
@@ -15,6 +17,8 @@
       private $serialFields=array(); //array of Serial PolyLabelField Objects
       private $qtyField; //only one quantity field per label allowed  
       private $barcodes=array(); //array of Barcode Objects
+      private $stampID; //We will "stamp" (merge) this label with the "stamp" label to create static headers/footers/content
+      private $labelType; //The type of label it is (eg stamp, form, avery 5160, avery 5167, etc.)
  
       public function __construct(mysqli $labelsdb, $labelID=""){
          if(!empty($labelID)){
@@ -22,21 +26,25 @@
             $this->id=$labelID;
          
             //query database for various properties
-            $labelQuery="SELECT labels_name, labels_picture_file, labels_picture_descriptive_file, 
-                             labels_glabels_file, labels_description, labels_num_copies, labels_active FROM polylabels_labels
-                             WHERE labels_id=$this->id";
+            $labelQuery="SELECT labels_name, labels_picture_file, labels_picture_descriptive_file, labels_glabels_file, 
+                                 labels_description, labels_num_copies, labels_active, labels_outline, labels_stamp_label_id, label_type_id 
+                                 FROM polylabels_labels
+                                 WHERE labels_id=$this->id";
 
             //echo $labelQuery;
 
             //set properties from database results
             $labelResults=$labelsdb->query($labelQuery);
-            list($this->name,$this->samplePic,$this->sampleDescPic,$this->glabelsFile, $this->description, $this->numcopies, $this->active)=$labelResults->fetch_row();
-
+            list($this->name,$this->samplePic,$this->sampleDescPic,$this->glabelsFile, 
+                     $this->description, $this->numcopies, $this->active, $this->outline, 
+                     $this->stampID,$labelTypeID)=$labelResults->fetch_row();
+                     
             //results no longer needed
             $labelResults->free();
          
             $this->setFields($labelsdb);
             $this->setBarcodes($labelsdb);
+            $this->labelType = new PolyLabelType($labelsdb,$labelTypeID);
          }else{
             $this->addNewLabel($labelsdb);
          }
@@ -44,7 +52,7 @@
 
       function __get($propName){
          $allowedVars = array("name","description","samplePic","sampleDescPic","glabelsFile","numcopies",
-                              "staticFields","serialFields","qtyField","barcodes","active");
+                              "staticFields","serialFields","qtyField","barcodes","active","outline","stampID","labelType");
          if (in_array($propName,$allowedVars)){
             return $this->$propName;
          }else{
@@ -97,6 +105,30 @@
          $updateQuery="UPDATE polylabels_labels SET labels_active=$newState WHERE labels_id=$this->id";
 
          if($labelsdb->query($updateQuery)){ $this->active=$newState; }
+      }
+      
+      public function changeOutlineState(mysqli $labelsdb){
+         if($this->outline){
+            $newState=0;
+         }else{
+            $newState=1;
+         }
+
+         $updateQuery="UPDATE polylabels_labels SET labels_outline=$newState WHERE labels_id=$this->id";
+
+         if($labelsdb->query($updateQuery)){ $this->outline=$newState; }
+      }
+      
+      public function updateStampID(mysqli $labelsdb,$newStampID){
+         $updateQuery="UPDATE polylabels_labels SET labels_stamp_label_id=$newStampID WHERE labels_id=$this->id";
+         
+         if($labelsdb->query($updateQuery)){ $this->stampID=$newStampID; }
+      }
+      
+      public function updateLabelTypeID(mysqli $labelsdb,$newLabelTypeID){
+         $updateQuery="UPDATE polylabels_labels SET label_type_id=$newLabelTypeID WHERE labels_id=$this->id";
+         echo $updateQuery;
+         if($labelsdb->query($updateQuery)){ $this->labelType = new PolyLabelType($labelsdb,$newLabelTypeID); }
       }
       
       public function addField(mysqli $labelsdb,$fieldName,$fieldCSVName,$fieldType){
@@ -154,6 +186,21 @@
          if($labelsdb->query($query)){
             $this->sampleDescPic=$sampleDescPicture;
          }
+      }
+      
+      public function getAllLabelNames(mysqli $labelsdb){
+         $query = "SELECT labels_id,labels_name FROM polylabels_labels ORDER BY labels_id";
+         $labelResults=$labelsdb->query($query);
+         $labelsArray[0]="";
+         while($label=$labelResults->fetch_assoc()){
+            $labelsArray[$label['labels_id']]=$label['labels_name'];
+         }
+         return $labelsArray;
+      }
+      
+      public function getStampLabelName(mysqli $labelsdb){
+         $stampLabel = new PolyLabel($labelsdb,$this->stampID);
+         return $stampLabel->name;
       }
       
       private function setFields(mysqli $labelsdb){

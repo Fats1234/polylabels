@@ -87,6 +87,18 @@
          
       }
       
+      public function changeHideState(mysqli $labelsdb){
+         if($this->hidden){
+            $newState=0;
+         }else{
+            $newState=1;
+         }
+
+         $updateQuery="UPDATE polylabels_fields_names SET fields_is_hidden=$newState WHERE fields_name_id=$this->id";
+
+         if($labelsdb->query($updateQuery)){ $this->hidden=$newState; }
+      }
+      
       public function addFieldValue(mysqli $labelsdb,$value=""){
          $addQuery="INSERT INTO polylabels_fields_values SET fields_name_id=$this->id,fields_value='$value'";
 
@@ -120,7 +132,7 @@
             return 0;
          }
       }
-
+      
       protected function setNameType(mysqli $labelsdb){
          //query database for field name and csv name
          $fieldsQuery="SELECT fields_name, fields_csv_name, fields_is_serial, fields_is_quantity, fields_is_hidden FROM polylabels_fields_names WHERE fields_name_id=$this->id";

@@ -17,6 +17,10 @@
       $labelsResult->free();   
 
       $label = new PolyLabel($labelsdb,$labelID);
+      
+      //if it has a stamp then we need stamp label as well
+      if($label->stampID)
+         $stamp = new PolyLabel($labelsdb,$label->stampID);
 
       echo "<font size=\"6\">Label Name: $label->name</font><br>";
       echo "<img src=\"images/$label->sampleDescPic\"><br /><br />\n";
@@ -38,7 +42,10 @@
             echo genHidden($field->csvname,$field->presetVals[0]);
          }else{
             $fieldsTable->setCellContents($row,0,"$field->name");
-            $fieldsTable->setCellContents($row,1,genTextBox($field->csvname,$field->presetVals[0]));
+            if(isset($_POST[$field->csvname]))
+               $fieldsTable->setCellContents($row,1,genTextBox($field->csvname,$_POST[$field->csvname]));
+            else
+               $fieldsTable->setCellContents($row,1,genTextBox($field->csvname,$field->presetVals[0]));
             if(count($field->presetVals) > 1){
                   $dropdownjavascript = "\n<script type=\"text/javascript\">\n";
                   $dropdownjavascript .= "   var $field->csvname"."tb = document.getElementById('$field->csvname');\n";
@@ -50,9 +57,8 @@
                   $fieldsTable->setCellContents($row,2,genDropBox($field->csvname."drop",$field->presetVals).$dropdownjavascript);
             }         
             $row++;
-         }
+         }         
       }
-
       $row++;
 
       /*Generate Label Settings Section (for number of copies and first label start position*/
@@ -144,6 +150,21 @@
          $row++;
       }
 
+      //Next we need to generate all hidden fields for the stamp information and allow it to be passed here via post
+      if($label->stampID){
+         foreach($stamp->staticFields as $field){
+            if(isset($_POST[$field->csvname]))
+               echo genHidden($field->csvname,$_POST[$field->csvname]);
+            else
+               echo genHidden($field->csvname,$field->presetVals[0]);
+         }
+         foreach($stamp->serialFields as $serialfield){
+            if(isset($_POST[$serialfield->csvname])){
+               echo genHidden($serialfield->csvname,$_POST[$serialfield->csvname]);
+            }
+         }
+      }
+      
       $attrs = array('width'=>'250');
       $fieldsTable->setColAttributes(0,$attrs);
       $attrs = array('width'=>'250');

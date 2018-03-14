@@ -21,17 +21,27 @@
       return $textarea;
    }
 
-   function genDropBox($fieldname,$options,$default=""){
+   function genDropBox($fieldname,$options,$default="",$useIndexAsValue=FALSE){
       if(empty($options)){
          return;
       }
       
       $dropbox = "<select name=\"$fieldname\" id=\"$fieldname\" style=\"width: 250px\">\n";
-      foreach($options as $option){
-         if(!strcmp($option,$default)){
-            $dropbox .= "<option value=\"$option\" selected>$option</option>\n";
-         }else{
-            $dropbox .= "<option value=\"$option\">$option</option>\n";
+      if ($useIndexAsValue){
+         foreach($options as $id => $option){
+            if($id==$default){
+               $dropbox .= "<option value=\"$id\" selected>$option</option>\n";
+            }else{
+               $dropbox .= "<option value=\"$id\">$option</option>\n";
+            }
+         }
+      }else{
+         foreach($options as $option){
+            if(!strcmp($option,$default)){
+               $dropbox .= "<option value=\"$option\" selected>$option</option>\n";
+            }else{
+               $dropbox .= "<option value=\"$option\">$option</option>\n";
+            }
          }
       }
       $dropbox .= "</select>\n";

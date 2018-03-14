@@ -9,7 +9,9 @@
    if (isset($_POST['labelID'])){
       $labelsdb = new mysqli($host,$dbuser,$dbpass,$database);
      
-      $label = new PolyLabel($labelsdb,$_POST['labelID']);     
+      $label = new PolyLabel($labelsdb,$_POST['labelID']);
+      if($label->stampID)
+         $stamp = new PolyLabel($labelsdb,$label->stampID);
       
       //set header
       $fieldVals=array();
@@ -101,20 +103,72 @@
             fwrite($fh,$rowString."\n");
          }
       }
-
+      unset($serialNums);
+      unset($fullRowStrs);
       fclose($fh);
+      
+      //start generating the stamp csv and pdf
+      if($label->stampID){
+         $csvHeader="";
+         $staticRowStr="";
+         $fullRowStrs=array();
+         foreach($stamp->staticFields as $staticField){
+            $csvHeader.=$staticField->csvname.",";
+            $staticRowStr.=str_replace(",","\,",$_POST[$staticField->csvname]).",";
+            $fieldVals[$staticField->csvname]=$_POST[$staticField->csvname];
+         }
+         
+         foreach($stamp->serialFields as $serialField){
+            $serialNums=array();
+            $csvHeader.=$serialField->csvname.",";
+            $serialNums=explode("\n",str_replace("\r","",trim($_POST[$serialField->csvname])));
+            for($i=0;$i<count($serialNums);$i++){
+               $fullRowStrs[$i].=str_replace(",","\,",$serialNums[$i]).",";
+            }
+         }
+         
+         if(count($fullRowStrs)){
+            foreach($fullRowStrs as $index => $serialRowStr){
+               $fullRowStrs[$index]=$staticRowStr.$serialRowStr;
+            }
+         }else{
+            array_push($fullRowStr,$staticRowStr);
+         }
+         
+         $fh=fopen("tmp/stamp.csv","wt");
+         fwrite($fh,$csvHeader."\n");
+         foreach($fullRowStrs as $rowString){
+            for($i=0;$i<$_POST['numcopies'];$i++){
+               fwrite($fh,$rowString."\n");
+            }
+         }
+         fclose($fh);
+      }
+      
       $labelsdb->close();
 
       exec("mv tmp/label.csv archive/label.csv");
       $timestamp=date("Y-m-d-His");
       $startPosition=$_POST['startposition'];
       exec("cp archive/label.csv archive/label-$timestamp.csv");
-      exec("glabels-3-batch -o output/$label->name/$label->name-$timestamp.pdf -f $startPosition -i archive/label.csv glabels/$label->glabelsFile");
+      $glabelsCMD="glabels-3-batch -o output/$label->name/$label->name-$timestamp.pdf -f $startPosition -i archive/label.csv";
+      if ($label->outline)
+         $glabelsCMD.=" -l";
+      $glabelsCMD.=" glabels/$label->glabelsFile";
+      exec($glabelsCMD);
+      if($label->stampID){
+         exec("mv tmp/stamp.csv archive/stamp.csv");
+         $glabelsCMD="glabels-3-batch -o output/$stamp->name/$stamp->name-$timestamp.pdf -i archive/stamp.csv glabels/$stamp->glabelsFile";
+         exec($glabelsCMD);
+         exec("mv output/$label->name/$label->name-$timestamp.pdf output/$label->name/temp.pdf");
+         $pdftkCMD="pdftk output/$label->name/temp.pdf multistamp output/$stamp->name/$stamp->name-$timestamp.pdf output output/$label->name/$label->name-$timestamp.pdf";
+         exec($pdftkCMD);
+      }
 
       echo "<font size=\"6\">The label file is ready.  Right click the link below and save as or click to open:</font><br />\n";
       echo "<a href=\"output/$label->name/$label->name-$timestamp.pdf\"><font size=\"6\">$label->name-$timestamp.pdf</font></a><br /><br />\n";
       echo "<font size=\"6\">Alternatively, the file is available at:</font><br />\n";
-      echo "<font size=\"6\">\\\\production03\\share001\\labels_pdf\\$label->name\\$label->name-$timestamp.pdf</font><br />\n";
+      echo "<font size=\"6\">\\\\polyerp01\\archive\\labels_pdf\\$label->name\\$label->name-$timestamp.pdf</font><br />\n";
       echo "<font size=\"6\">R:\\labels_pdf\\$label->name\\$label->name-$timestamp.pdf</font><br />\n";
 
    }
